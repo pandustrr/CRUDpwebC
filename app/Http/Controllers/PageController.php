@@ -3,24 +3,34 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use App\Models\Menu; 
 
 class PageController extends Controller
 {
+
     public function login()
     {
+        // Jika sudah login, redirect ke dashboard
+        if (session()->has('username')) {
+            return redirect()->route('dashboard');
+        }
         return view('login');
     }
 
     public function authenticate(Request $request)
     {
         $request->validate([
-            'username' => 'required',
-            'password' => 'required'
+            'username' => 'required|string|max:255',
+            'password' => 'required|string'
         ]);
 
+
         if ($request->password === '123') {
-            session(['username' => $request->username]);
-            return redirect()->route('dashboard');
+            session([
+                'username' => $request->username,
+                'logged_in_at' => now()
+            ]);
+            return redirect()->intended(route('dashboard'));
         }
 
         return back()->withErrors([
@@ -30,48 +40,45 @@ class PageController extends Controller
 
     public function dashboard()
     {
-        if (!session()->has('username')) {
-            return redirect()->route('login');
-        }
+        $this->checkAuth();
 
         $username = session('username');
-        return view('dashboard', compact('username'));
+        $loginTime = session('logged_in_at');
 
+        return view('dashboard', compact('username', 'loginTime'));
     }
 
     public function profile()
     {
-        if (!session()->has('username')) {
-            return redirect()->route('login');
-        }
+        $this->checkAuth();
 
         $username = session('username');
         return view('profile', compact('username'));
     }
 
+
     public function pengelolaan()
     {
-        if (!session()->has('username')) {
-            return redirect()->route('login');
-        }
-
-        $widgets = [
-            ['id' => 1, 'name' => 'Kopi Hitam', 'category' => 'Minuman', 'price' => 15000, 'jumlah' => 15],
-            ['id' => 2, 'name' => 'Latte', 'category' => 'Minuman', 'price' => 25000, 'jumlah' => 8],
-            ['id' => 3, 'name' => 'Cappuccino', 'category' => 'Minuman', 'price' => 25000, 'jumlah' => 0],
-            ['id' => 4, 'name' => 'Chicken Katsu', 'category' => 'Makanan', 'price' => 20000, 'jumlah' => 12],
-            ['id' => 5, 'name' => 'Sambal ijo', 'category' => 'Makanan', 'price' => 30000, 'jumlah' => 5],
-        ];
+        $this->checkAuth();
+        $menus = Menu::all();
 
         return view('pengelolaan', [
-            'widgets' => $widgets,
+            'menus' => $menus,
             'username' => session('username', 'Admin')
         ]);
     }
 
     public function logout()
     {
-        session()->forget('username');
-        return redirect('/login');
+        session()->flush();
+
+        return redirect('/login')->with('status', 'Anda telah logout');
+    }
+
+    protected function checkAuth()
+    {
+        if (!session()->has('username')) {
+            return redirect()->route('login')->with('error', 'Silakan login terlebih dahulu');
+        }
     }
 }
