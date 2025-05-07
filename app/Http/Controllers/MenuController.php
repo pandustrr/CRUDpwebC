@@ -58,7 +58,7 @@ class MenuController extends Controller
         $menu->delete();
 
         if (Menu::count() === 0) {
-            Menu::truncate(); // Ini akan reset auto increment juga
+            Menu::truncate(); 
         }
 
         return redirect()->route('pengelolaan')->with('success', 'Menu berhasil dihapus!');
